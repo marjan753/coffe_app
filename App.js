@@ -11,6 +11,9 @@ import TabNavigations from './Apps/Navigations/Tabnavigation';
 import paymentmethod from './Apps/Shoppingcard/paymentmethod';
 import { I18nManager } from 'react-native';
 import PaymentGateway from './Apps/Shoppingcard/paymentgateway';
+import history from './Apps/History/history';
+import orderItem from './Apps/History/orderItem';
+import AuthLoading from './Apps/Sign/AuthLoading';
 
 // فعال‌سازی RTL
 if (!I18nManager.isRTL) {
@@ -23,7 +26,7 @@ const Stack = createStackNavigator();
 function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login">
+    <Stack.Navigator initialRouteName="AuthLoading">
         <Stack.Screen 
           name="Login" 
           component={Login} 
@@ -53,6 +56,24 @@ function App() {
       name='PaymentGateway'
       component={PaymentGateway}
       options={{ headerShown: false }}/>
+
+
+       <Stack.Screen
+      name='history'
+      component={history}
+      options={{ headerShown: false }}/>
+
+      <Stack.Screen 
+      name="OrderItem" 
+      component={orderItem}
+      options={{ headerShown: false }}
+       />
+
+       <Stack.Screen 
+  name="AuthLoading" 
+  component={AuthLoading} 
+  options={{ headerShown: false }} 
+/>
 
       </Stack.Navigator>
 

@@ -106,19 +106,50 @@ export const fetchCategories = async () => {
 };
 
 export const fetchItemsByCategory = async (categoryId) => {
+  const id = parseInt(categoryId, 10);
+
+  if (isNaN(id)) {
+    console.error('Invalid categoryId:', categoryId);
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('products')
     .select('*')
-    .eq('category_id', categoryId);
+    .eq('category_id', id);
+
   if (error) {
     console.error('Error fetching items:', error);
     return [];
   }
+
   return data;
 };
 
-// تابع برای دریافت آیتم‌ها به همراه قیمت تخفیف‌خورده
+
 export const fetchAllItems = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*'); // همه فیلدها شامل image_url
+
+    if (error) {
+      console.error('Error fetching all items:', error);
+      return [];
+    }
+
+    
+    return data;
+
+  } catch (error) {
+    console.error('Unexpected error fetching items:', error);
+    return [];
+  }
+};
+
+
+// تابع برای دریافت آیتم‌ها به همراه قیمت تخفیف‌خورده
+/*export const fetchAllItems = async () => {
   try {
     const userId = await AsyncStorage.getItem('userId'); // فرض می‌کنیم که user_id در AsyncStorage ذخیره شده است
     const { data, error } = await supabase.rpc('get_products_with_discount', { user_id: userId }); // استفاده از تابع SQL که ایجاد کرده‌ایم
@@ -128,11 +159,12 @@ export const fetchAllItems = async () => {
     }
     console.log('Fetched items:', data); 
     return data;
+
   } catch (error) {
     console.error('Error fetching items:', error);
     return [];
   }
-};
+};*/
 
 
 
@@ -202,9 +234,111 @@ export const fetchProductSizesExample = async (productId) => {
 };
 
 
+// فرستادن سبد خرید به سفارشات سمت سرور
+export const createOrderFromCart = async (userId) => {
+  try {
+    const cartKey = `cart_${userId}`;
+    console.log("Cart key for reading:", cartKey);
+
+    const cart = await AsyncStorage.getItem(cartKey);
+    if (!cart) throw new Error('سبد خرید یافت نشد');
+
+    const parsed = JSON.parse(cart);
+    const cartItems = parsed.items || [];
+    const total_price = parsed.total_price || 0;
+
+    if (cartItems.length === 0) throw new Error('سبد خرید خالی است');
+
+    // ایجاد سفارش در جدول orders
+    const { data: orderData, error: orderError } = await supabase
+      .from('orders')
+      .insert([
+        {
+          user_id: userId,
+          status: 'paid', // فرض بر این است که پرداخت انجام شده
+          total_price,
+        },
+      ])
+      .select()
+      .single();
+
+    if (orderError) throw new Error('خطا در ایجاد سفارش: ' + orderError.message);
+
+    // ساخت آرایه order_items فقط برای سایزهای دارای quantity > 0
+    const orderItems = cartItems.flatMap((item) =>
+      item.sizes
+        .filter((size) => size.quantity > 0)
+        .map((size) => ({
+          order_id: orderData.id,
+          product_id: item.id,
+          size_id: size.id,
+          quantity: size.quantity,
+          price: size.price,
+        }))
+    );
+
+    if (orderItems.length === 0) {
+      throw new Error('هیچ آیتمی برای ثبت در سفارش وجود ندارد.');
+    }
+
+    // ثبت آیتم‌ها در جدول order_items
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(orderItems);
+
+    if (itemsError) throw new Error('خطا در ذخیره آیتم‌های سفارش: ' + itemsError.message);
+
+    // حذف سبد خرید از AsyncStorage بعد از موفقیت
+    await AsyncStorage.removeItem(cartKey);
+
+    return orderData;
+
+  } catch (error) {
+    console.error('خطا در ایجاد سفارش:', error);
+    throw error;
+  }
+};
+
+//دریافت فاکتور سفارشاتاز سرور
+export const getUserOrders = async (user_id) => {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('user_id', user_id)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error('دریافت اطلاعات ناموفق');
+  return data;
+};
 
 
+// گرفتن آیتم‌های مربوط به یک فاکتور خاص
+export const getOrderItems = async (orderId) => {
+  const { data, error } = await supabase
+    .from('order_items')
+    .select(`
+      id,
+      quantity,
+      price,
+      total_price,
+      product:products (
+        id,
+        title,
+        description,
+        image_url
+      ),
+      size:sizes (
+        id,
+        size_name,
+        weight,
+        price
+      )
+    `)
+    .eq('order_id', orderId);
 
+  if (error) throw new Error(error.message);
+  return data;
+};
 
 
 

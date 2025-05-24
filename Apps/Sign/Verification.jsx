@@ -68,7 +68,7 @@ export default function Verification({ navigation }) {
   return (
     <View className="flex-1 bg-customblack">
       <Image
-        source={require('../../assets/images/signIn.png')}
+        source={require('../../assets/images/signIn.jpg')}
         className="w-full h-[400px] object-cover rounded-b-3xl"
       />
 

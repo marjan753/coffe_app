@@ -11,28 +11,36 @@ const Shopping = () => {
 
   // دریافت سبد خرید از AsyncStorage
   const fetchCartData = async () => {
-    try {
-      setLoading(true);
-      const cart = await AsyncStorage.getItem('cart');
-      const parsedCart = cart ? JSON.parse(cart) : [];
-
-      const updatedCart = await Promise.all(parsedCart.map(async (item) => {
-        const fetchedSizes = await loadSizes(item.id);
-        const mergedSizes = fetchedSizes.map((size) => {
-          const existingSize = item.sizes?.find((s) => s.id === size.id);
-          return existingSize ? { ...size, quantity: existingSize.quantity || 0 } : { ...size, quantity: 0 };
-        });
-        return { ...item, sizes: mergedSizes };
-      }));
-
-      setCartData(updatedCart);
-    } catch (error) {
-      console.error('Error fetching cart data:', error);
-      setCartData([]);
-    } finally {
-      setLoading(false);
+  try {
+    setLoading(true);
+    const userId = await AsyncStorage.getItem('userId');
+    if (!userId) {
+      Alert.alert('خطا', 'کاربر شناسایی نشد');
+      return;
     }
-  };
+
+    const cartKey = `cart_${userId}`;
+    const cart = await AsyncStorage.getItem(cartKey);
+    const parsedCart = cart ? JSON.parse(cart) : { items: [], total_price: 0 };
+
+    const updatedCart = await Promise.all(parsedCart.items.map(async (item) => {
+      const fetchedSizes = await loadSizes(item.id);
+      const mergedSizes = fetchedSizes.map((size) => {
+        const existingSize = item.sizes?.find((s) => s.id === size.id);
+        return existingSize ? { ...size, quantity: existingSize.quantity || 0 } : { ...size, quantity: 0 };
+      });
+      return { ...item, sizes: mergedSizes };
+    }));
+
+    setCartData(updatedCart);
+  } catch (error) {
+    console.error('Error fetching cart data:', error);
+    setCartData([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // بارگذاری سایزهای محصولات از سرور
   const loadSizes = async (productId) => {
@@ -52,14 +60,38 @@ const Shopping = () => {
   );
 
   // ذخیره سبد خرید در AsyncStorage
-  const saveCartData = async (updatedCart) => {
-    try {
-      await AsyncStorage.setItem('cart', JSON.stringify(updatedCart));
-      setCartData(updatedCart);
-    } catch (error) {
-      console.error('Error saving cart data:', error);
-    }
-  };
+ const saveCartData = async (cart) => {
+  try {
+    const userId = await AsyncStorage.getItem('userId');
+    if (!userId) return;
+
+    const cartKey = `cart_${userId}`;
+
+    // 1. محاسبه قیمت هر آیتم
+    const updatedCart = cart.map((item) => {
+      const itemTotal = item.sizes.reduce((sum, size) => {
+        return sum + (size.quantity * size.price);
+      }, 0);
+      return { ...item, total_price: itemTotal };
+    });
+
+    // 2. محاسبه جمع کل سبد
+    const cartTotal = updatedCart.reduce((total, item) => total + item.total_price, 0);
+
+    // 3. ذخیره در AsyncStorage
+    const cartObject = {
+      items: updatedCart,
+      total_price: cartTotal,
+    };
+
+    await AsyncStorage.setItem(cartKey, JSON.stringify(cartObject));
+    setCartData(updatedCart);
+
+  } catch (error) {
+    console.error('Error saving cart data:', error);
+  }
+};
+
 
   // تغییر تعداد بسته‌ها
   const handleQuantityChange = async (itemId, sizeId, newQuantity) => {

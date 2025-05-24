@@ -25,13 +25,13 @@ export default function Home() {
         {/* ستاره‌ها در سمت چپ */}
         <View className="flex-row">
           {stars.map((isActive, index) => (
-            <Ionicons
-              key={index}
-              name={isActive ? "star" : "star-outline"}  // نمایش ستاره روشن یا خام
-              size={24}
-              color={isActive ? '#D17842' : '#AEAEAE'}  // رنگ طلایی برای ستاره‌های روشن و خاکی برای خام
-              className="mr-1"  // فاصله بین ستاره‌ها
-            />
+         <Ionicons
+  key={index}
+  name={isActive ? "star" : "star-outline"}
+  size={24}
+  color={isActive ? '#D17842' : '#AEAEAE'}
+  style={{ marginRight: 4 }} // استفاده از استایل استاندارد
+/>
           ))}
         </View>
 
