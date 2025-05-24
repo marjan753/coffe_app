@@ -39,7 +39,7 @@ export const loginOrSignUp = async (phoneNumber) => {
     return { success: true, message: 'شماره موبایل با موفقیت ثبت شد!' };
 
   } catch (err) {
-    throw new Error('مشکلی پیش آمده است. لطفا دوباره تلاش کنید.');
+    throw new Error('مشکلی پیش آمده است. لطفا اینترنت خود را چک کنید و  دوباره تلاش کنید.');
   }
 };
 
